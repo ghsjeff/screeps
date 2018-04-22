@@ -1,0 +1,97 @@
+var roleScholar = {
+    run: function (creep) {
+        
+        //console.log("Scholar is in " + creep.room.name);
+        
+        // If we are in the target room, go to work
+        if (creep.room.name == Game.rooms[creep.memory.homeRoom].memory.target) {
+            
+            //Look for controllers that aren't ours
+            if (creep.room.controller.owner) {
+                
+                var controllers = _.filter(creep.room.find(FIND_STRUCTURES), (control) => (control.structureType == STRUCTURE_CONTROLLER
+                    && !control.owner.my
+                    && !control.upgradeBlocked));
+            } else {
+                var controllers = [creep.room.controller, null];
+            }
+            
+            console.log(controllers.length);
+            
+            // We're done if we own the controller
+            if (creep.memory.fighting && controllers.length == 0) {
+                delete creep.memory.fighting;
+                delete creep.memory.job;
+                console.log(creep.name + " is heading back to be recycled.");
+            }
+            
+            
+            if (!creep.memory.fighting && controllers.length) {
+                creep.memory.fighting = true;
+                //creep.say('claiming!');
+            }
+            
+            if (creep.memory.fighting) {
+                
+                // select the controller as our target
+                if (!creep.memory.job) {
+                    if (controllers.length) {
+                        creep.memory.job = controllers[0].id;
+                    }
+                }
+                
+                if (creep.memory.job) {
+                    if (Game.getObjectById(creep.memory.job)) {
+                        
+                        // controller is owned by an enemy
+                        if (controllers[0].owner) {
+                            if (creep.attackController(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                                creep.moveTo(Game.getObjectById(creep.memory.job));
+                            }
+                        // controller is not owned by anyone
+                        } else if (!controllers[0].owner) {
+                            if (creep.claimController(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                                creep.moveTo(Game.getObjectById(creep.memory.job));
+                            }
+                        }
+                        
+                    } else {
+                        creep.memory.job = false;
+                    }
+                }
+            } else {
+                
+                creep.moveTo(new RoomPosition(25,25, creep.memory.homeRoom));
+                
+                if (!Game.rooms[creep.memory.homeRoom].memory.targetTick) {
+                    Game.rooms[creep.memory.homeRoom].memory.targetTick = 0;
+                }
+                
+                Game.rooms[creep.memory.homeRoom].memory.targetTick = Game.time + creep.room.controller.upgradeBlocked;
+                
+            }
+        } else {
+            
+            var allStructuresInRoom = creep.room.find(FIND_STRUCTURES);
+            
+            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            
+            // We can't attack if still Upgrade Blocked.
+            if ((Game.rooms[creep.memory.homeRoom].memory.targetTick - Game.time) > 100) {
+                //creep.say("Recycle me...");
+                if (spawns[0].recycleCreep(creep) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(spawns[0].pos);
+                }
+                //creep.moveTo(creep.room.controller.pos);
+            } else {
+                // go to attack room
+                creep.moveTo(new RoomPosition(25,25, Game.rooms[creep.memory.homeRoom].memory.target));
+            }
+            
+            //go to home room
+            //creep.moveTo(new RoomPosition(25,25, creep.memory.homeRoom));
+        }
+    }
+}
+
+module.exports = roleScholar;
