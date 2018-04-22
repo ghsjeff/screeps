@@ -1,3 +1,7 @@
+// Giving a creep this role ends its service, returning it to spawn for recycling
+// If the creep is in a room with a spawn, it will choose that one
+// Otherwise, it will return to where it was spawned
+
 var roleRecycling = {
     
     run: function(creep) {
