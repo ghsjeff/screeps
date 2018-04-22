@@ -1,0 +1,54 @@
+var powerMiner = {
+    
+    run: function(creep) {
+        
+        delete creep.memory.powerRoom;
+        creep.memory.workRoom = 'E10N53';
+        
+        if (!creep.memory.powerRoom) {
+            creep.memory.workRoom = creep.memory.homeRoom;
+        }
+        
+        var numPowerMinerHealers = _.filter(Game.creeps, (creep) => creep.memory.role == 'powerMinerHealer').length;
+        console.log(creep.room.name == creep.memory.workRoom);
+        if (!(creep.room.name == creep.memory.workRoom)) {
+            
+            if (numPowerMinerHealers) {
+                creep.moveTo(new RoomPosition(25,25, creep.memory.workRoom));
+            }
+        } else {
+            var powerBanks = _.filter(creep.room.find(FIND_STRUCTURES), (structure) => structure.structureType == STRUCTURE_POWER_BANK);
+            console.log(powerBanks.length);
+            // what to do when there is a Power Bank
+            if (powerBanks.length) {
+                
+                console.log("Power Bank at " + powerBanks[0].hits + "/" + powerBanks[0].hitsMax);
+                
+                // attack only if healthy
+                if (creep.hits > creep.hitsMax / 2) {
+                    if (creep.attack(powerBanks[0]) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(powerBanks[0]);
+                    }
+                }
+                
+            } else {
+                var allStructuresInRoom = creep.room.find(FIND_STRUCTURES);
+            
+                let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+                
+                // We can't attack if still Upgrade Blocked.
+                if (!creep.memory.powerRoom) {
+                    creep.say("Recycle me...");
+                    if (spawns[0].recycleCreep(creep) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(spawns[0].pos);
+                    }
+                    //creep.moveTo(creep.room.controller.pos);
+                }
+            }
+            
+        }
+        
+    }
+}
+
+module.exports = powerMiner;
