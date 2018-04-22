@@ -1,0 +1,88 @@
+var roleHealer = {
+    run: function (creep) {
+        
+        if (creep.hits < (creep.hitsMax /2)) {  
+            creep.say(creep.hits+'/'+creep.hitsMax);
+        }
+//        console.log(creep.name+': '+creep.hits+'/'+creep.hitsMax+' HP');
+
+        var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+        
+        var allCreepsInRoom = creep.room.find(FIND_MY_CREEPS);
+        
+        var healers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'healer' && creep.hits < creep.hitsMax);
+        var fighters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'fighter');
+        var injFighters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'fighter' && creep.hits < creep.hitsMax);
+        
+//        console.log('Enemies in room: '+enemies.length);
+        
+        if (enemies.length > 0) {
+            var buddies = injFighters.concat(healers);
+        } else {
+            /*
+            var buddies = creep.room.find(FIND_MY_CREEPS, {
+                filter: (buddy) => {
+                    return (buddy.hits < buddy.hitsMax);
+                } 
+            });
+            */
+            var buddies = _.filter(allCreepsInRoom, (creep) => creep.hits < creep.hitsMax);
+        }
+        
+        
+        
+//        console.log('Buddies in room: '+buddies.length);
+        
+        if (creep.memory.healing && buddies.length == 0) {
+            creep.memory.healing = false;
+            delete creep.memory.job;
+            creep.say('no injured');
+        }
+        
+        if (!creep.memory.healing && buddies.length) {
+            creep.memory.healing = true;
+            creep.say('heal');
+        }
+        
+        if (creep.memory.healing) {
+            
+            // what to do when healing
+//            console.log(creep.name+' says, "Healing '+Game.getObjectById(creep.memory.job).pos+'."');
+            // choose a target
+            if (!creep.memory.job) {
+                creep.memory.job = buddies[Math.floor(Math.random() * buddies.length)].id;
+//                console.log(creep.name+' says, "Switching heals to '+Game.getObjectById(creep.memory.job).name+'."');
+            }
+            // heal the target
+            if (creep.memory.job) {
+                
+                if (Game.getObjectById(creep.memory.job)) {
+                    
+                    if (creep.heal(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                        creep.rangedHeal(Game.getObjectById(creep.memory.job));
+                        creep.moveTo(Game.getObjectById(creep.memory.job));
+                    }
+                    
+                    if (Game.getObjectById(creep.memory.job).hits == Game.getObjectById(creep.memory.job).hitsMax) {
+//                        console.log(Game.getObjectById(creep.memory.job).name+' ('+Game.getObjectById(creep.memory.job).memory.role+') full health!')
+                        delete creep.memory.job;
+                    } else {
+                        
+                    }
+                    
+                } else {
+                    delete creep.memory.job;
+                }
+            }
+        } else {
+            if (fighters.length) {
+                creep.moveTo(fighters[0].pos.x, fighters[0].pos.y - 2);
+            } else {
+                creep.moveTo(3,26);
+            }
+            
+        }
+    }
+}
+
+module.exports = roleHealer;
