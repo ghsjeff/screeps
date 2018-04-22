@@ -1,0 +1,106 @@
+var statusReport = {
+    
+    run: function(curRoom) {
+        const TICKSTOREPORT = 10;
+        
+        if (!(Game.time % TICKSTOREPORT)) {
+            // State report start
+            console.log('  -=======  STATE REPORT  =======-   ');
+            console.log('Room Name:', curRoom.name);
+            console.log('Star Date:', Game.time);
+            console.log('Work Status:', curRoom.memory.status);
+            if (curRoom.memory.target) {
+                console.log("War Target:", curRoom.memory.target);
+                console.log("Ticks until next attack:", (curRoom.memory.targetTick - Game.time));
+            }
+            // State report end
+            
+            // Controller report start
+            console.log('  -=======  CONTROLLER REPORT  =======-   ');
+            console.log('Controller Level:', curRoom.controller.level);
+            
+            var progressBar = '[';
+            var progressBarLength = 29;
+            for (let x = 0; x < progressBarLength; x++) {
+                if (x == Math.floor(progressBarLength/2)) {
+                    progressBar+=(curRoom.controller.progress/curRoom.controller.progressTotal * 100).toFixed(1)+'%';
+                } else if (x/progressBarLength < curRoom.controller.progress/curRoom.controller.progressTotal) {
+                    progressBar+='=';
+                } else {
+                    progressBar+=' ';
+                }
+            }
+            progressBar += ']';
+            
+            console.log('Progess:', curRoom.controller.progress+'/'+curRoom.controller.progressTotal+
+    //            ' = '+(Game.rooms['sim'].controller.progress/Game.rooms['sim'].controller.progressTotal * 100).toFixed(1)+'%' + 
+                ' '+progressBar);
+                
+            if (curRoom.controller.ticksToDowngrade < CONTROLLER_DOWNGRADE[curRoom.controller.level]) {
+                console.log('Ticks to downgrade:', curRoom.controller.ticksToDowngrade);
+            }
+            // Controller report end
+            
+            // Speed report start
+            console.log('  -=======  SPEED REPORT  =======-   ');
+            if (!curRoom.memory.seconds) curRoom.memory.seconds = 0;
+            
+            var seconds = new Date().getSeconds();
+            
+            if (0 > (seconds - curRoom.memory.seconds)) {
+                console.log(seconds + 60 - curRoom.memory.seconds, 'seconds since last update.');
+                console.log('Speed:', (TICKSTOREPORT / (seconds + 60 - curRoom.memory.seconds)).toFixed(2), 'ticks per second.');
+                console.log('Speed:', ((seconds + 60 - curRoom.memory.seconds) / TICKSTOREPORT).toFixed(2), 'seconds per tick.');
+            } else {
+                console.log(seconds - curRoom.memory.seconds, 'seconds since last update.');
+                console.log('Speed:', (TICKSTOREPORT / (seconds - curRoom.memory.seconds)).toFixed(2), 'ticks per second.');
+                console.log('Speed:', ((seconds - curRoom.memory.seconds) / TICKSTOREPORT).toFixed(2), 'seconds per tick.');
+            }
+            
+            curRoom.memory.seconds = seconds;
+            // Speed report end
+            
+            // Repair report start
+            if (!curRoom.memory.repairSites) curRoom.memory.repairSites = [];
+            
+            if (curRoom.memory.repairSites.length) {
+                console.log('  -=======  REPAIR REPORT  =======-   ');
+                console.log(curRoom.memory.repairSites.length, 'structures are damaged.')
+            }
+            // Repair report end
+            
+            // Energy report start
+            console.log('  -=======  ENERGY REPORT  =======-   ');
+            console.log('Room Energy:', curRoom.energyAvailable+'/'+curRoom.energyCapacityAvailable+' = '+
+            Math.floor((curRoom.energyAvailable/curRoom.energyCapacityAvailable) * 100) // Percent
+            +"%");
+            
+            var allStructuresInRoom = curRoom.find(FIND_STRUCTURES);
+            
+            var containers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+            
+            if (containers.length) {
+                if (curRoom.storage) {
+                    containers = containers.concat(curRoom.storage);
+                }
+                for (let x in containers) {
+                    console.log(containers[x], 'has', containers[x].store.energy, 'energy.');
+                }
+            }
+            // Energy report end
+        }
+        /*
+        Why does this exist?
+        // Controller level up tick recorder start
+        if (!curRoom.memory.levelTime) {
+            curRoom.memory.levelTime = [];
+        } else if (!curRoom.memory.levelTime[curRoom.controller.level]) {
+            curRoom.memory.levelTime[curRoom.controller.level] =
+                { level: curRoom.controller.level, time: Game.time}
+        }
+        // Controller level up tick recorder end
+        */
+    }
+}
+
+module.exports = statusReport;
