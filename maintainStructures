@@ -1,0 +1,234 @@
+var maintainStructures = {
+    
+    run: function(curRoom) {
+        if (!curRoom.memory.repairSites) curRoom.memory.repairSites = [];
+        if (!curRoom.memory.sourceRoad) curRoom.memory.sourceRoad = [];
+        if (!curRoom.memory.buildQueue) curRoom.memory.buildQueue = [];
+        
+        const MAXSITES = 3;
+        
+        var allStructuresInRoom = curRoom.find(FIND_STRUCTURES);
+        
+        var spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+        var extensions = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_EXTENSION);
+        var containers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+        
+        var sources = curRoom.find(FIND_SOURCES);
+        
+        var constructionSites = curRoom.find(FIND_CONSTRUCTION_SITES);
+        var sites = constructionSites.length;
+        
+        var allCreepsInRoom = curRoom.find(FIND_MY_CREEPS);
+        
+        var numFighters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'fighter').length;
+        var numHealers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'healer').length;
+        var numTowers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_TOWER).length;
+        
+        if (!(Game.time % 100) && !sites) {
+             var repairSites = _.filter(allStructuresInRoom, (structure) => {
+                    if (curRoom.find(FIND_HOSTILE_CREEPS).length) {
+                        return (structure.hits < (structure.hitsMax * .9) && structure.structureType != STRUCTURE_RAMPART && structure.structureType != STRUCTURE_WALL);
+                    } else {
+                        return (structure.hits < (structure.hitsMax * .9) && structure.hits < 400000 && structure.structureType != STRUCTURE_RAMPART); //  Fix anything below %
+                    }
+                });
+            curRoom.memory.repairSites = [];
+            for (let i in repairSites) {
+                curRoom.memory.repairSites[i] = repairSites[i].id;
+            }
+        }
+        
+        // Function to add new construction sites to a list for building
+        function queueBuild(x, y, type) {
+            if (!curRoom.memory.buildQueue) curRoom.memory.buildQueue = [];
+            for (let i in curRoom.memory.buildQueue) {
+                if (x == curRoom.memory.buildQueue[i].x && y == curRoom.memory.buildQueue[i].y) {
+                    return -1;
+                }
+            }
+            if ((!curRoom.lookForAt(LOOK_STRUCTURES,x,y)[0]) || type == STRUCTURE_RAMPART || type == STRUCTURE_ROAD) {
+                curRoom.memory.buildQueue.push({x:x,y:y,type:type});
+            }
+        }
+        
+        // Queues up construction for a path
+        function buildRoad(path, end) {
+            var roads = _.filter(curRoom.memory.plan.planQueue, (schematic) => schematic.type === 1);
+            for (let i in path) {
+                if (i < (path.length - 2)) {
+                    var dupes = _.filter(roads, (schematic) => schematic.x === path[i].x && schematic.y === path[i].y).length;
+                    if (!dupes) {
+                        queueBuild(path[i].x,path[i].y, STRUCTURE_ROAD);
+                    }
+                } else {
+                    queueBuild(path[i].x,path[i].y, end);
+                }
+            }
+        }
+        
+        // Build road around controller
+        function buildControllerRoad() {
+            var path = curRoom.findPath(spawns[0].pos,curRoom.controller.pos, {ignoreCreeps: true, costCallback: function(roomName, costMatrix) {
+                var trial = _.filter(curRoom.memory.plan.planQueue, (schematic) => schematic.type >= 3);
+                var trial2 = _.filter(curRoom.memory.buildQueue, (schematic) => (schematic.type == STRUCTURE_SPAWN || schematic.type == STRUCTURE_WALL || schematic.type == STRUCTURE_EXTENSION || schematic.type == STRUCTURE_LINK || schematic.type == STRUCTURE_STORAGE || schematic.type == STRUCTURE_TOWER || schematic.type == STRUCTURE_OBSERVER || schematic.type == STRUCTURE_POWER_SPAWN || schematic.type == STRUCTURE_LAB || schematic.type == STRUCTURE_TERMINAL || schematic.type == STRUCTURE_NUKER));
+                var trial3 = _.filter(curRoom.find(FIND_STRUCTURES), (schematic) => (schematic.structureType == STRUCTURE_SPAWN || schematic.structureType == STRUCTURE_WALL || schematic.structureType == STRUCTURE_EXTENSION || schematic.structureType == STRUCTURE_LINK || schematic.structureType == STRUCTURE_STORAGE || schematic.structureType == STRUCTURE_TOWER || schematic.structureType == STRUCTURE_OBSERVER || schematic.structureType == STRUCTURE_POWER_SPAWN || schematic.structureType == STRUCTURE_LAB || schematic.structureType == STRUCTURE_TERMINAL || schematic.structureType == STRUCTURE_NUKER));
+                var trial4 = _.filter(curRoom.find(FIND_CONSTRUCTION_SITES), (schematic) => (schematic.structureType == STRUCTURE_SPAWN || schematic.structureType == STRUCTURE_WALL || schematic.structureType == STRUCTURE_EXTENSION || schematic.structureType == STRUCTURE_LINK || schematic.structureType == STRUCTURE_STORAGE || schematic.structureType == STRUCTURE_TOWER || schematic.structureType == STRUCTURE_OBSERVER || schematic.structureType == STRUCTURE_POWER_SPAWN || schematic.structureType == STRUCTURE_LAB || schematic.structureType == STRUCTURE_TERMINAL || schematic.structureType == STRUCTURE_NUKER));
+                
+                for (var a in trial) {
+                    costMatrix.set(trial[a].x, trial[a].y, 255);
+                }
+                for (var a in trial2) {
+                    costMatrix.set(trial2[a].x, trial2[a].y, 255);
+                }
+                for (var a in trial3) {
+                    costMatrix.set(trial3[a].pos.x, trial3[a].pos.y, 255);
+                }
+                for (var a in trial4) {
+                    costMatrix.set(trial4[a].pos.x, trial4[a].pos.y, 255);
+                }
+            }});
+            for (let i = 0; i < (path.length - 5); i++) {
+                queueBuild(path[i].x,path[i].y, STRUCTURE_ROAD);
+            }
+            for (let i = -3; i <= 3; i++) {
+                queueBuild(curRoom.controller.pos.x + i, curRoom.controller.pos.y + 4, STRUCTURE_ROAD);
+            }
+            for (let i = 3; i >= -3; i--) {
+                queueBuild(curRoom.controller.pos.x - 4, curRoom.controller.pos.y + i, STRUCTURE_ROAD);
+            }
+            for (let i = 3; i >= -3; i--) {
+                queueBuild(curRoom.controller.pos.x + 4, curRoom.controller.pos.y + i, STRUCTURE_ROAD);
+            }
+            for (let i = -3; i <= 3; i++) {
+                queueBuild(curRoom.controller.pos.x + i, curRoom.controller.pos.y - 4, STRUCTURE_ROAD);
+            }
+        }
+        
+        // Function to test if we are below the limit of a given structure
+        function checkLimit(structType, structMarker) {
+            var trial = _.filter(curRoom.memory.plan.planQueue, (schematic) => schematic.type === structMarker).length;
+            if (trial) {
+                var trial2 = _.filter(curRoom.memory.buildQueue, (schematic) => schematic.type === structType).length;
+                var trial3 = _.filter(curRoom.find(FIND_STRUCTURES), (schematic) => schematic.structureType === structType).length;
+                var trial4 = _.filter(curRoom.find(FIND_CONSTRUCTION_SITES), (schematic) => schematic.structureType === structType).length;
+                var curLimit = CONTROLLER_STRUCTURES[structType][curRoom.controller.level];
+                return (trial2 + trial3 + trial4 < curLimit);
+            }
+            else {
+                return (trial);
+            }
+        }
+        
+        // Function to queue the first structure of the given type
+        function queueFirst(structType, structMarker) {
+            findFirst:
+            for (var i in curRoom.memory.plan.planQueue) {
+                if (curRoom.memory.plan.planQueue[i].type == structMarker) {
+                    var structMatchs = _.filter(allStructuresInRoom, (schematic) => schematic.pos.x == curRoom.memory.plan.planQueue[i].x && schematic.pos.y == curRoom.memory.plan.planQueue[i].y && schematic.structureType == structType);
+                    var constructMatchs = _.filter(constructionSites, (schematic) => schematic.pos.x == curRoom.memory.plan.planQueue[i].x && schematic.pos.y == curRoom.memory.plan.planQueue[i].y && schematic.structureType == structType);
+                    if (!structMatchs.length && !constructMatchs.length) {
+                        queueBuild(curRoom.memory.plan.planQueue[i].x, curRoom.memory.plan.planQueue[i].y, structType);
+                        //curRoom.memory.plan.planQueue.splice(i, 1);
+                        break findFirst;
+                    }
+                }
+            }
+        }
+        
+        // This iterates through the planQueue to move stuff into the build queue
+        if (curRoom.memory.plan.planQueue.length && (curRoom.controller.level >= 2)) {
+            if (checkLimit(STRUCTURE_EXTENSION, 4)) {
+                queueFirst(STRUCTURE_EXTENSION, 4);
+            }
+            else {
+                if (checkLimit(STRUCTURE_TOWER, 5)) {
+                    queueFirst(STRUCTURE_TOWER, 5);
+                }
+                else {
+                    if (checkLimit(STRUCTURE_SPAWN, 6)) {
+                        queueFirst(STRUCTURE_SPAWN, 6);
+                    }
+                    else {
+                        if (checkLimit(STRUCTURE_POWER_SPAWN, 7)) {
+                            queueFirst(STRUCTURE_POWER_SPAWN, 7);
+                        }
+                        else {
+                            if (checkLimit(STRUCTURE_STORAGE, 8)) {
+                                queueFirst(STRUCTURE_STORAGE, 8);
+                            }
+                            else {
+                                if (checkLimit(STRUCTURE_LINK, 9)) {
+                                    queueFirst(STRUCTURE_LINK, 9);
+                                }
+                                else {
+                                    if (checkLimit(STRUCTURE_LAB, 10)) {
+                                        queueFirst(STRUCTURE_LAB, 10);
+                                    }
+                                    else {
+                                        if (checkLimit(STRUCTURE_TERMINAL, 11)) {
+                                            queueFirst(STRUCTURE_TERMINAL, 11);
+                                        }
+                                        else {
+                                            if (checkLimit(STRUCTURE_OBSERVER, 12)) {
+                                                queueFirst(STRUCTURE_OBSERVER, 12);
+                                            }
+                                            else {
+                                                if (checkLimit(STRUCTURE_EXTRACTOR, 13)) {
+                                                    queueFirst(STRUCTURE_EXTRACTOR, 13);
+                                                }
+                                                else {
+                                                    if (checkLimit(STRUCTURE_CONTAINER, 14)) {
+                                                        queueFirst(STRUCTURE_CONTAINER, 14);
+                                                    }
+                                                    else if (curRoom.memory.buildQueue.length < 5) {
+                                                        if (checkLimit(STRUCTURE_ROAD, 1)) {
+                                                            queueFirst(STRUCTURE_ROAD, 1);
+                                                        }
+                                                        else if (curRoom.controller.level >= 3) {
+                                                            if (checkLimit(STRUCTURE_RAMPART, 2)) {
+                                                                queueFirst(STRUCTURE_RAMPART, 2);
+                                                            }
+                                                            else if (checkLimit(STRUCTURE_WALL, 3)) {
+                                                                queueFirst(STRUCTURE_WALL, 3);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        /*/ This builds the Controller Road. Condition should be when all safe source roads are finished.
+        if (containers.length == 2) {
+            buildControllerRoad();
+        }
+        /*/
+        
+        // Destroy roads under extensions to conserve resources
+        if (!(Game.time % 100)) {
+            for (let i in extensions) {
+                var extTile = curRoom.lookForAt(LOOK_STRUCTURES, extensions[i].pos);
+                for (let j in extTile) {
+                    if (extTile[j].structureType == STRUCTURE_ROAD) {
+                        Game.getObjectById(extTile[j].id).destroy();
+                    }
+                }
+            }
+        }
+        
+        if (sites < MAXSITES && curRoom.memory.buildQueue[0]) {
+            let site = curRoom.memory.buildQueue[0];
+            curRoom.createConstructionSite(site.x, site.y, site.type)
+            curRoom.memory.buildQueue.shift();
+        }
+    }
+}
+
+module.exports = maintainStructures;
