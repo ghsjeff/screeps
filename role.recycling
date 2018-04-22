@@ -1,0 +1,39 @@
+var roleRecycling = {
+    
+    run: function(creep) {
+    
+        // deletes any pre-existing job that isn't a spawn
+        if (creep.memory.job) {
+            if (Game.getObjectById(creep.memory.job).structureType) {
+                if (Game.getObjectById(creep.memory.job).structureType != STRUCTURE_SPAWN) {
+                    delete creep.memory.job;
+                }
+            } else {
+                delete creep.memory.job;
+            }
+        }
+        
+        // gives creep a spawn to recycle to or sends it home
+        if (!creep.memory.job) {
+            
+            var allStructuresInRoom = creep.room.find(FIND_STRUCTURES);
+            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            
+            if (spawns.length) {
+                creep.memory.job = spawns[0].id;
+            } else {
+                creep.moveTo(new RoomPosition(25,25, creep.memory.homeRoom));
+            }
+        }
+        
+        // move the creep to spawn and recycle it
+        if (creep.memory.job) {
+            creep.say("Recycle me...");
+            if (Game.getObjectById(creep.memory.job).recycleCreep(creep) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(Game.getObjectById(creep.memory.job));
+            }
+        }
+    }
+}
+
+module.exports = roleRecycling;
