@@ -1,0 +1,392 @@
+
+var maintainCreeps = {
+    
+    run: function(curRoom) {
+        
+        for (var name in Memory.creeps) {
+            if (!Game.creeps[name]) {
+                delete Memory.creeps[name];
+            }
+        }
+        
+        var allStructuresInRoom = curRoom.find(FIND_STRUCTURES);
+        
+        var containers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+        
+        var constructionSites = curRoom.find(FIND_CONSTRUCTION_SITES);
+        
+        const WORKERPART = [WORK, CARRY, CARRY, MOVE, MOVE];
+        const TRANSFERPART = [CARRY, CARRY, MOVE];
+        const SCHOLARPART = [CLAIM, MOVE];
+        
+        function bodyCost(body) {
+            var cost = 0;
+            for (let i in body) {
+                cost += BODYPART_COST[body[i]];
+            }
+            return cost;
+        }
+        
+        function makeCreep(body, role, workRoom) {
+            
+            if (!workRoom) {
+                workRoom = curRoom.name;
+            }
+            
+            console.log("MAKE CREEP CALL: " + curRoom.name + " " + role + " " + workRoom);
+            
+            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            
+            for (let x in spawns) {
+                if (spawns[x].canCreateCreep(body,{role: role}) == 0) {
+                    console.log('New '+role+': '+spawns[x].createCreep(body,{role: role, homeRoom: curRoom.name, workRoom: workRoom}));
+                    break;
+                }
+            }
+            
+            return 'No Spawns Available';
+        }
+        
+        // Special wrapper for createCreep made to facilitate POWER MINERS - makeCreep() should be updated to be more like this
+        function makeSpecialCreep(body, memory) {
+            
+            console.log("MAKE SPECIAL CREEP CALL: " + curRoom.name);
+            
+            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            
+            for (let x in spawns) {
+                if (spawns[x].canCreateCreep(body) == 0) {
+                    console.log('New '+memory.role+': '+spawns[x].createCreep(body,memory));
+                    break;
+                }
+            }
+            
+            return 'No Spawns Available';
+        }
+
+        function makeScholar() {
+            var body = [];
+            
+            while (bodyCost(body) + bodyCost(SCHOLARPART) <= curRoom.energyCapacityAvailable && body.length + SCHOLARPART.length <= 50) {
+                body = body.concat(SCHOLARPART);
+            }
+            
+            makeCreep(body,'scholar');
+        }
+        
+        function makeWorker() {
+            var body = [];
+            var multiplier = Math.floor(curRoom.energyCapacityAvailable / 300);
+            
+            for (let i = 0; i < multiplier; i++) {
+                if (body.length + WORKERPART.length <= 50) {
+                    body = body.concat(WORKERPART);
+                }
+            }
+            
+            while (bodyCost(body) + 200 <= curRoom.energyCapacityAvailable && body.length + 3 <= 50) {
+                body = body.concat([WORK, CARRY, MOVE]);
+            }
+            
+            makeCreep(body,'builder');
+        }
+        
+        function makeTransfer() {
+            var body = [];
+            var multiplier = Math.floor(curRoom.energyCapacityAvailable / 150);
+            
+            for (let i = 0; i < multiplier; i++) {
+                if (body.length + TRANSFERPART.length <= 50) {
+                    body = body.concat(TRANSFERPART);
+                } else {
+                    break;
+                }
+            }
+            
+            makeCreep(body,'transfer');
+            
+        }
+        
+        var allCreepsInRoom = curRoom.find(FIND_MY_CREEPS);
+        
+        var numTesters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'tester').length;
+        var numScholars = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'scholar').length;
+        
+        var numFighters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'fighter').length;
+        var numInvaders = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'invader').length;
+        var numHealers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'healer').length;
+        var numHarvesters = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'harvester').length;
+        var numWorkers = _.filter(allCreepsInRoom, (creep) => (creep.memory.role == 'builder' || creep.memory.role == 'repairer')).length;
+        var transfers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'transfer');
+        var fillers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'filler');
+        var numUpgraders = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'upgrader').length;
+        var miners = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'miner');
+        
+        // Test code for a dynamic harvester limit
+        if (!curRoom.memory.harvesterMax) {
+            var spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            var firstSpawnPos = spawns[0].pos;
+            var pathToNearestSource = firstSpawnPos.findPathTo(firstSpawnPos.findClosestByPath(FIND_SOURCES)).length;
+            curRoom.memory.harvesterMax = Math.round(3 + (pathToNearestSource / 4));
+        }
+        
+        // change to add a test creep
+        const TESTERMAX = 0;
+        const SCHOLARMAX = 0;
+        
+        const HARVESTERMAX = curRoom.memory.harvesterMax;
+        const WORKERMAX = Math.ceil(15 / (curRoom.energyCapacityAvailable / bodyCost(WORKERPART)));
+        const UPGRADERMAX = 1;
+        const FILLERMAX = 1;
+        const FIGHTERMAX = 0;
+        const INVADERMAX = 0;
+        const HEALERMAX = 0;
+        // const TRANSFERMAX = 1;
+        // todo fix this formula to prevent overspawning transfer creeps
+        const TRANSFERMAX = Math.ceil(Math.floor(1.75 * containers.length) / (curRoom.energyCapacityAvailable / (3 * bodyCost(TRANSFERPART))));
+        const MINERMAX = containers.length;
+        
+        // TEST CODE FOR POWER MINER AND POWER MINER HEALER
+        
+        var powerMiners = _.filter(Game.creeps, (creep) => creep.memory.role == 'powerMiner');
+        var numPowerMinerHealers = _.filter(Game.creeps, (creep) => creep.memory.role == 'powerMinerHealer').length;
+        
+        //console.log(curRoom.name + curRoom.energyAvailable);
+        //console.log(curRoom.energyCapacityAvailable);
+        //console.log(curRoom.energyAvailable == curRoom.energyCapacityAvailable);
+        if (!powerMiners.length && 0 && (curRoom.energyAvailable == curRoom.energyCapacityAvailable) && curRoom.name == 'E11N53') {
+            console.log('New Power Miner: '+makeSpecialCreep([
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,                          // TOUGH:  5 x  10 =   50
+                CARRY, CARRY, CARRY, CARRY, CARRY,                          // CARRY:  5 x  50 =  250
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,                           // MOVE:   20 x 50 = 1000
+                ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
+                ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
+                ATTACK, ATTACK,                                             // ATTACK: 12 x 80 =  960
+                                                                            // Total:            2260
+                ],{role: 'powerMiner', homeRoom: curRoom.name, workRoom: 'E10N53', powerRoom: 'E10N53'}));                                     
+        }
+        
+        if (powerMiners.length && !numPowerMinerHealers && curRoom.name == 'E11N53' && (curRoom.energyAvailable == curRoom.energyCapacityAvailable)) {
+            console.log('New Power Miner Healer: '+makeSpecialCreep([
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,                                                // MOVE:  7 x  50  =  350
+                HEAL, HEAL,
+                HEAL, HEAL,
+                HEAL, HEAL,
+                HEAL                                                        // HEAL:   7 x 250 = 1750
+                                                                            // TOTAL:            2100
+                ],{role: 'powerMinerHealer', homeRoom: curRoom.name, powerMinerToHeal: powerMiners[0].name}));
+        }
+        
+        // END POWER TEST BLOCK
+        
+        if (miners.length > MINERMAX) {
+            miners[miners.length - 1].memory.job = miners[0].memory.job;
+            
+            //we could recycle old miners here, but having them leave immediately results in a new loss in energy
+            //miners[0].memory.role = "recycling";
+        }
+        
+        // Calculate energy in containers
+        var containerEnergy = 0;
+        var needTransfer = false;
+        // Extra Transfer help when containers filling up
+        if (containers.length) {
+            for (let x in containers) {
+                containerEnergy += containers[x].store.energy;
+                if (containers[x].store.energy == 2001) {
+                    var needTransfer = true;
+                }
+            }
+        }
+        
+        if (needTransfer) {
+            if (containerEnergy < containers.length * 2000) {
+                needTransfer = false;
+            }
+        }
+        
+        // Creep Report
+        // && 0 to turn off creep report
+        if (!(Game.time % 10) && 0) {
+            if (numWorkers != WORKERMAX ||
+                numUpgraders != UPGRADERMAX ||
+                miners.length != MINERMAX ||
+                transfers.length != TRANSFERMAX ||
+                fillers.length != FILLERMAX ||
+                (containers.length == 0 && numHarvesters < HARVESTERMAX)) {
+                    
+                console.log('  -=======  CREEP REPORT  =======-  ');
+                console.log(numHarvesters+'/'+HARVESTERMAX+' harvesters.');
+                console.log(numWorkers+'/'+WORKERMAX+' workers.');
+                console.log(numUpgraders+'/'+UPGRADERMAX+' upgraders.');
+                console.log(fillers.length+'/'+FILLERMAX+' fillers.');
+                console.log(miners.length+'/'+MINERMAX+' miners.');
+                console.log(transfers.length+'/'+TRANSFERMAX+' transfers.');
+                
+            } else {
+                console.log('All creep levels at max.')
+            }
+        }
+        //*/
+        
+        if (curRoom.energyCapacityAvailable >= 550 &&
+            (miners.length < containers.length ||
+            transfers.length < TRANSFERMAX ||
+            (numFighters < FIGHTERMAX && curRoom.energyCapacityAvailable >= 800 && curRoom.find(FIND_HOSTILE_CREEPS).length)) ||
+            miners.length == 0 && numHarvesters < HARVESTERMAX) {
+            
+            curRoom.memory.status = 'paused';
+        } else {
+            curRoom.memory.status = 'unpaused';
+        }
+        
+        if ((miners.length == 0 && transfers.length == 0) && (containers.length) && curRoom.controller.level > 1) {
+                for (var name in Game.creeps) {
+                    var creep = Game.creeps[name];
+                    
+                    if (creep.memory.role == 'builder') {
+                        creep.memory.role = 'harvester';
+                        console.log(creep.room.name + "-" + creep.name+' converted from an upgrader to a harvester.');
+                    }
+                }
+        }
+        
+        if (numUpgraders < UPGRADERMAX && curRoom.controller.level < 8) {
+            
+            var workers = _.filter(allCreepsInRoom, (creep) => (creep.memory.role == 'builder' || creep.memory.role == 'repairer')); // _.filter(Game.creeps, (creep) => ((creep.memory.role == 'builder' || creep.memory.role == 'repairer') && creep.room == curRoom));
+            
+            if (workers.length) {
+                workers[0].memory.role = 'upgrader';
+                console.log(workers[0].room.name + "-" + workers[0].name+' converted from a worker to an upgrader.');
+            }
+        }
+        
+        if (fillers.length < FILLERMAX && curRoom.storage) {
+            
+            var workers = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'transfer'); // _.filter(Game.creeps, (creep) => (creep.memory.role == 'transfer' && creep.room == curRoom));
+            
+            if (workers.length) {
+                workers[0].memory.role = 'filler';
+                console.log(workers[0].room.name + "-" + workers[0].name+' converted from a transfer to a filler.');
+            }
+        }
+        
+        if (curRoom.energyAvailable >= 800 &&
+            numFighters < FIGHTERMAX) {
+            
+            makeCreep([
+                MOVE,  MOVE,  MOVE,  MOVE,                                  // MOVE    4 x  50 = 200
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK                                // RANGED: 4 x 150 = 600
+                ],'fighter');                                     // Total:            800
+        }
+        
+        if (curRoom.energyCapacityAvailable >= 800 &&
+            curRoom.energyAvailable == curRoom.energyCapacityAvailable &&
+            containerEnergy >= 3000 &&
+            numHealers < HEALERMAX) {
+                
+            makeCreep([
+                TOUGH, TOUGH,                                               // TOUGH : 2 x  20 =  40
+                MOVE,  MOVE,
+                MOVE,  MOVE,                                                // MOVE  : 4 x  50 = 200
+                HEAL, HEAL                                                  // HEAL  : 2 x 250 = 500
+                ], 'healer');                                      // Total:            740
+        }
+        
+        if (numFighters < FIGHTERMAX && curRoom.energyAvailable >= (2700 + 1000)) {
+            console.log('New Fighter: '+makeCreep([
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,              
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,                          // TOUGH:  20 x  10 =  200
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,                           // MOVE    20 x  50 = 1000
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,                               // RANGED: 10 x 150 = 1500
+                ],'fighter'));                                     // Total:             2700
+        }
+        
+        if (numTesters < TESTERMAX) {
+            console.log('New Tester: '+makeCreep([
+                MOVE
+                ],'tester'));
+        }
+        
+        //conditions for spawning a scholar
+        if (numScholars < SCHOLARMAX
+            && curRoom.memory.status == "unpaused"
+            && (!curRoom.memory.targetTick || (curRoom.memory.targetTick - Game.time) < 75)) {
+            //makeScholar();
+        }
+
+        if (numInvaders < INVADERMAX) {
+            console.log('New Invader: '+makeCreep([
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,                           // MOVE    10 x  50 = 500
+                RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,
+                RANGED_ATTACK, RANGED_ATTACK,                               // RANGED: 5 x 150 = 750
+                ],'invader'));                                     // Total:             1350
+        }
+        
+        if (numHealers < HEALERMAX && curRoom.energyAvailable >= (2700 + 1000)) {
+            console.log('New Healer: '+makeCreep([
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,              
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,                          // TOUGH: 20 x  10 =  200
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,                           // MOVE:  20 x  50 = 1000
+                HEAL, HEAL,
+                HEAL, HEAL,
+                HEAL, HEAL,                                                 // HEAL:   6 x 250 = 1500
+                ],'healer'));                                      // Total:            2700
+        }
+        
+        if (numHarvesters == HARVESTERMAX && numWorkers < WORKERMAX && curRoom.energyAvailable >= 300 && curRoom.energyCapacityAvailable < 500){
+            makeWorker();
+        }
+        
+        if ((miners.length < MINERMAX || (miners.length && miners.length == MINERMAX && miners[0].ticksToLive < 100)) && curRoom.energyAvailable >= 550) {
+            makeCreep([
+                WORK, WORK, WORK, WORK, WORK,                               // WORK:   5 x 100 =  500
+                MOVE                                                        // MOVE:   1 x  50 =   50
+                ],'miner');                                       // Total:             550
+        } else
+        
+        // condition for making a new transfer
+        if ((needTransfer)
+            || transfers.length < TRANSFERMAX
+            || ((fillers.length && fillers[0].ticksToLive < 60)
+            && transfers.length == TRANSFERMAX)) {
+            makeTransfer();
+        } else if ((numWorkers < WORKERMAX && curRoom.energyAvailable == curRoom.energyCapacityAvailable) && (curRoom.storage && curRoom.storage.store.energy > 50000)) {
+            makeWorker();
+        }
+        
+        if ((miners.length == 0) &&
+            numHarvesters < HARVESTERMAX &&
+            curRoom.energyAvailable >= 300 &&
+            curRoom.energyAvailable < 550) {
+            makeCreep([
+                WORK, WORK,                                                 // WORK:   2 x 100 =  200
+                CARRY,                                                      // CARRY:  1 x  50 =   50
+                MOVE                                                        // MOVE:   1 x  50 =   50
+                ],'harvester');                                   // Total:             300
+        }
+    }
+}
+
+module.exports = maintainCreeps;
