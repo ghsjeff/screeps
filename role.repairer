@@ -1,0 +1,67 @@
+var creepWithdraw = require('func.creepWithdraw');
+
+var roleRepairer = {
+    
+    run: function(creep) {
+        
+        //console.log(creep.name);
+        
+        var construction = creep.room.find(FIND_CONSTRUCTION_SITES);
+            
+        if (construction.length) {
+            creep.memory.role = 'builder';
+        }
+        
+        if (creep.memory.working && creep.carry.energy == 0) {
+            creep.memory.working = false;
+            creep.say('withdraw');
+        }
+        
+        if (!creep.memory.working && creep.carry.energy == creep.carryCapacity) {
+            creep.memory.working = true;
+            delete creep.memory.job;
+            creep.say('work');
+        }
+        
+        
+        if (creep.memory.working) {
+            var targets = creep.room.memory.repairSites;
+            
+//            console.log('Repair report: '+targets.length);
+            
+            if (!creep.memory.job && targets.length) {
+                creep.memory.job = targets[0];
+                creep.room.memory.repairSites.shift();
+                creep.say('repair');
+                //console.log(creep.name+' got a new job: '+Game.getObjectById(creep.memory.job));
+            }
+            
+
+            
+            if (creep.memory.job) {
+                if (Game.getObjectById(creep.memory.job))
+                {
+                    if (creep.repair(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(Game.getObjectById(creep.memory.job));
+                    }  else if (creep.pos.lookFor(LOOK_STRUCTURES)[0]){
+                        creep.moveTo(targets[0]);
+                    }
+                    if (Game.getObjectById(creep.memory.job).hits == Game.getObjectById(creep.memory.job).hitsMax) {
+                        creep.memory.job = false;
+                    }
+                } else {
+                    delete creep.memory.job;
+                }
+            } else if (targets.length == 0) {
+                if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.controller);
+                }
+            }
+            
+        } else {
+            creepWithdraw.run(creep);
+        }
+    }
+}
+
+module.exports = roleRepairer;
