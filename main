@@ -1,0 +1,266 @@
+// Function stuff
+var maintainCreeps = require('func.maintainCreeps');
+var maintainStructures = require('func.maintainStructures');
+var maintainNexus = require('func.maintainNexus');
+var expansionControl = require('func.expansionControl');
+var statusReport = require('func.statusReport');
+var visualizePlans = require('func.visualizePlans');
+
+// Role Stuff
+var roleHarvester = require('role.harvester');
+var roleBuilder = require('role.builder');
+var roleUpgrader = require('role.upgrader');
+var roleRepairer = require('role.repairer');
+var roleMiner = require('role.miner');
+var roleTransfer = require('role.transfer');
+var roleFiller = require('role.filler');
+var roleTower = require('role.tower');
+var roleFighter = require('role.fighter');
+var roleHealer = require('role.healer');
+var roleInvader = require('role.invader');
+var roleScholar = require('role.scholar');
+var roleTest = require('role.testCreep');
+var rolePowerMiner = require('role.powerMiner');
+var rolePowerMinerHealer = require('role.powerMinerHealer');
+var roleRecycling = require("role.recycling");
+
+module.exports.loop = function () {
+    if (!Memory.tickSpeedReport && Memory.tickSpeedReport !== false) Memory.tickSpeedReport = false;
+    var startLoopTime = new Date().getTime();
+    var startRoomLoopTime = new Date().getTime();
+    
+    // cleanup memory from rooms with no vision
+    for (var a in Memory.rooms) {
+        if (!Game.rooms[a]) {
+            delete Memory.rooms[a];
+        }
+    }
+    
+    // TEST CODE SAFE TO DELETE
+    
+    // END TEST CODE
+    
+    for (var a in Game.rooms) {
+        
+        if (Game.rooms[a].find(FIND_MY_SPAWNS).length) {
+            // Function for status report
+            
+            var startStatusReportTime = new Date().getTime();
+            statusReport.run(Game.rooms[a]);
+            var endStatusReportTime = new Date().getTime(); 
+            
+            // Function for creep maintenance
+            var startCreepMainTime = new Date().getTime();
+            maintainCreeps.run(Game.rooms[a]);
+            var endCreepMainTime = new Date().getTime(); 
+
+            // Nexus Maintenance
+            var startNexusMainTime = new Date().getTime();
+            maintainNexus.run(Game.rooms[a]);
+            var endNexusMainTime = new Date().getTime(); 
+            
+            expansionControl.run(Game.rooms[a]);
+
+            // If statement to reduce resource consumption for building maintenance
+            if (!(Game.time % 10)) {
+                var startStructMainTime = new Date().getTime();
+                maintainStructures.run(Game.rooms[a]);
+                var endStructMainTime = new Date().getTime(); 
+            }
+            
+            // Plans Visual
+            var startPlansVisualTime = new Date().getTime();
+            visualizePlans.run(Game.rooms[a]);
+            var endPlansVisualTime = new Date().getTime(); 
+            
+            // Tower AI Start
+            var startTowerLoopTime = new Date().getTime();
+            var towers = Game.rooms[a].find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return structure.structureType == STRUCTURE_TOWER;
+                }
+            });
+            
+            for (let x in towers) {
+                roleTower.run(towers[x]);
+            }
+            var endTowerLoopTime = new Date().getTime(); 
+            // Tower AI end
+            
+            // Room Execution Time Report Start
+            if (Memory.tickSpeedReport) {
+                console.log("-===== ROOM MANAGEMENT TIMES =====-");
+                console.log("Status Report - Start: " + startStatusReportTime + " | End: " + endStatusReportTime + " | Split: " + (endStatusReportTime - startStatusReportTime));
+                console.log("Creep Management - Start: " + startCreepMainTime + " | End: " + endCreepMainTime + " | Split: " + (endCreepMainTime - startCreepMainTime));
+                console.log("Nexus Management - Start: " + startNexusMainTime + " | End: " + endNexusMainTime + " | Split: " + (endNexusMainTime - startNexusMainTime));
+                if (!(Game.time % 10)) {
+                    console.log("Structure Management - Start: " + startStructMainTime + " | End: " + endStructMainTime + " | Split: " + (endStructMainTime - startStructMainTime));
+                }
+                console.log("Plans Visual - Start: " + startPlansVisualTime + " | End: " + endPlansVisualTime + " | Split: " + (endPlansVisualTime - startPlansVisualTime));
+                console.log("Tower AI Management - Start: " + startTowerLoopTime + " | End: " + endTowerLoopTime + " | Split: " + (endTowerLoopTime - startTowerLoopTime));
+            }
+            // Room Execution Time Report End
+        }
+    }
+    var endRoomLoopTime = new Date().getTime(); 
+    
+    // Unit AI start
+    var startAILoopTime = new Date().getTime();
+    
+    for (var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        //creep.suicide();
+        
+        //var myCpuStart = Game.cpu.getUsed();
+        if (creep.memory.role == 'healer') {
+            roleHealer.run(creep);
+        }
+        if (creep.memory.role == 'fighter') {
+            delete creep.memory.job;
+            roleFighter.run(creep);
+        }
+        if (creep.memory.role == 'invader') {
+            roleInvader.run(creep);
+        }
+        if (creep.memory.role == 'scholar') {
+            roleScholar.run(creep);
+        }
+        if (creep.memory.role == 'harvester') {
+            // creep.suicide();
+            roleHarvester.run(creep);
+        }
+        if (creep.memory.role == 'builder') {
+            // creep.suicide();
+            roleBuilder.run(creep);
+        }
+        if (creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+        if (creep.memory.role == 'repairer') {
+            roleRepairer.run(creep);
+            // creep.memory.job = false;
+        }
+        if (creep.memory.role == 'miner') {
+            // creep.suicide();
+            roleMiner.run(creep);
+        }
+        if (creep.memory.role == 'transfer') {
+            //delete creep.memory.job;
+            roleTransfer.run(creep);
+            // creep.suicide();
+            //creep.moveTo(new RoomPosition(27,3, "E11N53"));
+        }
+        if (creep.memory.role == 'filler') {
+            // delete creep.memory.job;
+            roleFiller.run(creep);
+            
+            //use to move minerals until code is updated
+            //run every hundred ticks
+        
+        }
+        if (creep.memory.role == 'tester') {
+            roleTest.run(creep);
+        }
+        if (creep.memory.role == 'powerMiner') {
+            rolePowerMiner.run(creep);
+        }
+        if (creep.memory.role == 'powerMinerHealer') {
+            rolePowerMinerHealer.run(creep);
+        }
+        if (creep.memory.role == 'recycling') {
+            roleRecycling.run(creep);
+        }
+        //console.log(creep.name + ": " + (Game.cpu.getUsed() - myCpuStart));
+        
+    }
+    //console.log("-----");
+    
+    var endAILoopTime = new Date().getTime();
+    // Unit AI end
+    
+    // Global Execution Time Report Start
+    var endLoopTime = new Date().getTime();
+    if (Memory.tickSpeedReport) {
+        console.log("-====== SCRIPT EXECUTION TIME ======-");
+        console.log("Room Management - Start: " + startRoomLoopTime + " | End: " + endRoomLoopTime + " | Split: " + (endRoomLoopTime - startRoomLoopTime));
+        console.log("Creep AI Management - Start: " + startAILoopTime + " | End: " + endAILoopTime + " | Split: " + (endAILoopTime - startAILoopTime));
+        console.log("Execution time - Start: " + startLoopTime + " | End: " + endLoopTime + " | Split: " + (endLoopTime - startLoopTime));
+    }
+    
+    if (!Memory.bucket) Memory.bucket = 0;
+    if (!Memory.execTimes) Memory.execTimes = [];
+    
+    var CPU_LIMIT = Game.cpu.limit; // Base MS allowed per tick
+    var CPU_LIMIT_CAP = 300; // Cap for CPU_LIMIT
+    var CPU_TICK_LIMIT = Game.cpu.tickLimit; // MS allowed per tick w/ bucket
+    var BUCKET = Game.cpu.bucket; // MS in bucket
+    var BUCKET_LIMIT = 10000; // Bucket MS cap
+    var BUCKET_TICK_LIMIT = 500; // MS in bucket allowed to be used per tick
+    var EXEC_TIMES_LIMIT = 50; // Limit to how many global execution times can be stored
+    
+    // Set CPU_LIMIT if sim
+    if ((!CPU_LIMIT && CPU_LIMIT != 0) || CPU_LIMIT == "Infinity") {
+        CPU_LIMIT = 30 + ((Game.gcl.level - 1) * 10);
+        if (CPU_LIMIT > CPU_LIMIT_CAP) {
+            CPU_LIMIT = CPU_LIMIT_CAP;
+        }
+    }
+    
+    // Set BUCKET if sim
+    if ((!BUCKET && BUCKET != 0) || BUCKET == "Infinity") {
+        BUCKET = 0 + Memory.bucket;
+    }
+    
+    // Set CPU_TICK_LIMIT is sim
+    if ((!CPU_TICK_LIMIT && CPU_TICK_LIMIT != 0) || CPU_TICK_LIMIT == "Infinity") {
+        CPU_TICK_LIMIT = CPU_LIMIT + BUCKET;
+        if (CPU_TICK_LIMIT > CPU_LIMIT + BUCKET_TICK_LIMIT) {
+            CPU_TICK_LIMIT = CPU_LIMIT + BUCKET_TICK_LIMIT;
+        }
+    }
+    
+    var execTime = (endLoopTime - startLoopTime); // Last split
+    
+    if (execTime <= CPU_LIMIT) {
+        Memory.bucket += (CPU_LIMIT - execTime);
+        if (Memory.bucket > BUCKET_LIMIT) {
+            Memory.bucket = BUCKET_LIMIT;
+        }
+    }
+    else if (execTime > CPU_LIMIT) {
+        Memory.bucket -= (execTime - CPU_LIMIT);
+        if (Memory.bucket < 0) {
+            Memory.bucket = 0;
+        }
+    }
+    BUCKET = Memory.bucket;
+    
+    Memory.execTimes.push(execTime);
+    while (Memory.execTimes.length > EXEC_TIMES_LIMIT) {
+        Memory.execTimes.splice(0, 1);
+    }
+    
+    var tempSum = 0;
+    for (var i in Memory.execTimes) {
+        tempSum += Memory.execTimes[i];
+    }
+    
+    if (Memory.tickSpeedReport) {
+        console.log("Average (of past " + EXEC_TIMES_LIMIT + ") execution cost (Should be below limit): " + (tempSum / Memory.execTimes.length) + "/" + CPU_LIMIT);
+        console.log("CPU_LIMIT: " + CPU_LIMIT + " | CPU_LIMIT_CAP: " + CPU_LIMIT_CAP + " | CPU_TICK_LIMIT: " + CPU_TICK_LIMIT + " | BUCKET: " + BUCKET + " | BUCKET_LIMIT: " + BUCKET_LIMIT + " | BUCKET_TICK_LIMIT: " + BUCKET_TICK_LIMIT);
+    }
+    // Global Execution Time Report End
+    
+    if (!Memory.cpuAverage) {
+        Memory.cpuAverage = 0;
+    }
+    
+    Memory.cpuAverage += Game.cpu.getUsed();
+    
+    if (!(Game.time % 10)) {
+        console.log("CPU Report");
+        console.log("< " + Math.ceil(Memory.cpuAverage / 10) + " per tick.");
+        Memory.cpuAverage = 0;
+        
+    }
+}
