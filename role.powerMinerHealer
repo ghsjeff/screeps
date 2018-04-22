@@ -1,0 +1,27 @@
+var powerMinerHealer = {
+    
+    run: function(creep) {
+        var miner = Game.creeps[creep.memory.powerMinerToHeal];
+        
+        if (miner) {
+            if (!(creep.room.name == miner.room.name)) {
+                creep.moveTo(new RoomPosition(25,25, miner.room.name));
+            } else {
+                if (creep.heal(miner) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(miner);
+                }
+            }
+        } else {
+            
+            var allStructuresInRoom = creep.room.find(FIND_STRUCTURES);
+            
+            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            creep.say("Recycle me...");
+            if (spawns[0].recycleCreep(creep) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(spawns[0].pos);
+            }
+        }
+    }
+}
+
+module.exports = powerMinerHealer;
