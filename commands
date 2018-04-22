@@ -1,0 +1,138 @@
+// This script allows for control over things through the console
+
+/*
+Description:
+Visualizes the boundary of the nexus (Theorized to break once the source roads are added to the plan queue)
+
+Parameters:
+targetRoom - Room object
+
+Usage:
+require('commands').visualizeBoundary({Room object});
+
+Example:
+require('commands').visualizeBoundary(Game.rooms['sim']);
+*/
+function visualizeBoundary(targetRoom) {
+    var firstSpawn = targetRoom.find(FIND_MY_SPAWNS)[0];
+    var storageLoc = {x: (firstSpawn.pos.x - 1), y: firstSpawn.pos.y};
+    var boundaries = {top: storageLoc.y, left: storageLoc.x, bottom: storageLoc.y, right: storageLoc.x};
+    var planQueue = targetRoom.memory.plan.planQueue;
+    for (var a in planQueue) {
+        if (planQueue[a].type > 2) {
+            if (planQueue[a].y < boundaries.top) {
+                boundaries.top = planQueue[a].y;
+            }
+            else if (planQueue[a].y > boundaries.bottom) {
+                boundaries.bottom = planQueue[a].y;
+            }
+            if (planQueue[a].x < boundaries.left) {
+                boundaries.left = planQueue[a].x;
+            }
+            else if (planQueue[a].x > boundaries.right) {
+                boundaries.right = planQueue[a].x;
+            }
+        }
+    }
+    boundaries.top -= 2;
+    boundaries.left -= 2;
+    boundaries.bottom += 2;
+    boundaries.right += 2;
+    new RoomVisual(targetRoom.name).rect((boundaries.top - 0.5), (boundaries.left - 0.5), (boundaries.bottom - boundaries.top + 1), (boundaries.right - boundaries.left + 1), {fill: 'transparent', stroke: 'red'});
+    return boundaries;
+}
+
+/*
+Description:
+Used to reset a section of the planning
+
+Parameters:
+targetRoom - Room object
+targetPlan - String (look to switch statement for the list)
+
+Usage:
+require('commands').resetPlan({Room object}, String);
+
+Example:
+require('commands').resetPlan(Game.rooms['sim'], 'ramparts');
+*/
+function resetPlan(targetRoom, targetPlan) {
+    //    Road: 1        | D  Rampart: 2      |    Wall: 3         | D  Extension: 4
+    // D  Tower: 5       | D  Spawn: 6        |    Power Spawn: 7  | D  Storage: 8
+    //    Link: 9        | D  Lab: 10         | D  Terminal: 11    |    Observer: 12 
+    //    Extractor: 13  | D  Container: 14
+    switch(targetPlan) {
+        case "extensions":
+            return "Sorry, but that plan reset hasn't been made";
+            break;
+        case "core":
+            return "Sorry, but that plan reset hasn't been made";
+            break;
+        case "labs":
+            return "Sorry, but that plan reset hasn't been made";
+            break;
+        case "sourceRoads":
+            return "Sorry, but that plan reset hasn't been made";
+            break;
+        case "towers":
+            var temp = _.filter(targetRoom.memory.plan.planQueue, (schematic) => schematic.type != 5);
+            targetRoom.memory.plan.planQueue = temp;
+            targetRoom.memory.plan.towers = false;
+            break;
+        case "ramparts":
+            var temp = _.filter(targetRoom.memory.plan.planQueue, (schematic) => schematic.type != 2);
+            targetRoom.memory.plan.planQueue = temp;
+            break;
+        default:
+            return "Invalid planner type";
+    }
+}
+
+/*
+Description:
+Shorthand for: Memory.tickSpeedReport = (true/false)
+
+Parameters:
+N/A
+
+Usage:
+require('commands').toggleTSR();
+
+Example:
+require('commands').toggleTSR();
+*/
+function toggleTSR() {
+    if (Memory.tickSpeedReport == true) {
+        Memory.tickSpeedReport = false;
+    }
+    else {
+        Memory.tickSpeedReport = true;
+    }
+}
+
+/*
+Description:
+Used to govern which room our room will attempt to take over
+
+Parameters:
+startingRoom - name of room to initiate attack
+targetRoom - name of room we wish to attack
+
+Usage:
+require('commands').setAttackTarget(String, String);
+
+Example:
+require('commands').setAttackTarget('E11N53', 'E11N52');
+*/
+function setAttackTarget(startingRoom, targetRoom) {
+    
+    Game.rooms[startingRoom].memory.target = targetRoom;
+}
+
+// Whenever a command is added to this script, it needs to be referenced in this export, following the already listed function's format
+module.exports = {
+    visualizeBoundary: visualizeBoundary,
+    resetPlan: resetPlan,
+    toggleTSR: toggleTSR,
+    setAttackTarget: setAttackTarget
+};
