@@ -1,0 +1,61 @@
+var visualizePlans = {
+    
+    run: function(curRoom) {
+        
+        // Function to visualize the planQueue
+        function visualizeBlueprint(curRoomName, queueType, structType, x, y) {
+            var rads = 0.5;
+            var fillColor = false;
+            var strokeColor = false;
+            // Color refs
+            var structColors = {road: '#bdbdbd',        rampart: '#9a9a9a',     wall: '#717171',
+                                extension: '#ffed1c',   tower: '#ff1697',       spawn: '#b135ff',
+                                powerSpawn: '#ff0000',  storage: '#dbff16',     link: '#deff5b',
+                                lab: '#7c39ff',         terminal: '#55ff91',    observer: '#5bff86',
+                                extractor: '#a0a0a0',   container: '#ffe847'                        };
+            var queueColors = {planQueue: '#6200ff', buildQueue: '#dfea38'};
+            // End Color Refs
+                 if (structType ==  1 || structType == STRUCTURE_ROAD        ) fillColor = structColors.road        ;
+            else if (structType ==  2 || structType == STRUCTURE_RAMPART     ) fillColor = structColors.rampart     ;
+            else if (structType ==  3 || structType == STRUCTURE_WALL        ) fillColor = structColors.wall        ;
+            else if (structType ==  4 || structType == STRUCTURE_EXTENSION   ) fillColor = structColors.extension   ;
+            else if (structType ==  5 || structType == STRUCTURE_TOWER       ) fillColor = structColors.tower       ;
+            else if (structType ==  6 || structType == STRUCTURE_SPAWN       ) fillColor = structColors.spawn       ;
+            else if (structType ==  7 || structType == STRUCTURE_POWER_SPAWN ) fillColor = structColors.powerSpawn  ;
+            else if (structType ==  8 || structType == STRUCTURE_STORAGE     ) fillColor = structColors.storage     ;
+            else if (structType ==  9 || structType == STRUCTURE_LINK        ) fillColor = structColors.link        ;
+            else if (structType == 10 || structType == STRUCTURE_LAB         ) fillColor = structColors.lab         ;
+            else if (structType == 11 || structType == STRUCTURE_TERMINAL    ) fillColor = structColors.terminal    ;
+            else if (structType == 12 || structType == STRUCTURE_OBSERVER    ) fillColor = structColors.observer    ;
+            else if (structType == 13 || structType == STRUCTURE_EXTRACTOR   ) fillColor = structColors.extractor   ;
+            else if (structType == 14 || structType == STRUCTURE_CONTAINER   ) fillColor = structColors.container   ;
+            else fillColor = false;
+            switch (queueType) {
+                case 'planQueue':
+                    strokeColor = queueColors.planQueue;
+                    break;
+                case 'buildQueue':
+                    strokeColor = queueColors.buildQueue;
+                    break;
+                default:
+                    break;
+            }
+            if (fillColor) new RoomVisual(curRoomName).circle(x, y, {fill: fillColor, radius: rads, stroke: strokeColor});
+        }
+        
+        // Visualize planQueue
+        if (curRoom.memory.plan.planQueue.length) {
+            for (var a in curRoom.memory.plan.planQueue) {
+                visualizeBlueprint(curRoom.name, 'planQueue', curRoom.memory.plan.planQueue[a].type, curRoom.memory.plan.planQueue[a].x, curRoom.memory.plan.planQueue[a].y);
+            }
+        }
+        // Visualize buildQueue
+        if (curRoom.memory.buildQueue.length) {
+            for (var a in curRoom.memory.buildQueue) {
+                visualizeBlueprint(curRoom.name, 'buildQueue', curRoom.memory.buildQueue[a].type, curRoom.memory.buildQueue[a].x, curRoom.memory.buildQueue[a].y);
+            }
+        }
+    }
+}
+
+module.exports = visualizePlans;
