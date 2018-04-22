@@ -1,0 +1,65 @@
+var roleTower = {
+    run: function(tower) {
+        
+        var enemies = tower.room.find(FIND_HOSTILE_CREEPS);
+        
+        var invaders = _.filter(enemies, (creep) => creep.owner.username === "Invader");
+        
+        var invaderHealer = false;
+        
+        for (let x in invaders) {
+            for (let y in invaders[x].body) {
+                if (invaders[x].body[y].type == HEAL) {
+                    invaderHealer = true;
+                    break;
+                }
+            }
+            if (invaderHealer) {
+                break;
+            }
+        }
+        
+        var damages = tower.room.memory.repairSites;
+        
+        var allCreepsInRoom = tower.room.find(FIND_MY_CREEPS);
+        
+        var injuries = _.filter(allCreepsInRoom, (creep) => creep.hits < creep.hitsMax);
+        
+        var injFighters = _.filter(allCreepsInRoom, (creep) => (creep.memory.role == 'fighter' && creep.hits < creep.hitsMax));
+        
+        var allStructuresInRoom = tower.room.find(FIND_MY_STRUCTURES);
+        
+        var ramparts = _.filter(allStructuresInRoom, (rampart) => (rampart.structureType == STRUCTURE_RAMPART && rampart.hits < 400000));
+        
+        var walls = _.filter(tower.room.find(FIND_STRUCTURES), (wall) => (wall.structureType == STRUCTURE_WALL && wall.hits < 50000));
+        
+        //console.log(Math.floor(Math.random() * enemies.length));
+        
+        if (invaderHealer) {
+            if (walls.length) {
+                tower.repair(walls[0]);
+            } else {
+                tower.repair(ramparts[0]);
+            }
+            
+        } else if (injFighters.length) {
+            tower.heal(injFighters[0]);
+        } else if (enemies.length) {
+            tower.attack(enemies[Math.floor(Math.random() * enemies.length)]);
+        } else if (injuries.length) {
+            tower.heal(injuries[0]);
+        } else if (ramparts.length && tower.room.memory.status != 'paused' && tower.energy > 500) {
+            tower.repair(ramparts[0]);
+        } else if (walls.length && tower.room.memory.status != 'paused' && tower.energy > 500) {
+            tower.repair(walls[0]);
+        } else if (tower.room.energyAvailable == tower.room.energyCapacityAvailable
+            && damages.length
+            && tower.room.memory.status != 'paused'
+            && (!tower.room.storage || tower.room.storage.store.energy > 50000)) {
+            tower.repair(Game.getObjectById(damages[0]));
+        }
+        
+    }
+}
+
+module.exports = roleTower;
