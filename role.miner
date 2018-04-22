@@ -1,0 +1,68 @@
+var roleMiner = {
+    
+    run: function(creep) {
+        
+        if (!creep.memory.job) {
+            
+//            console.log(creep.name+' says, "No job yet."');
+            
+            //var containers = _.filter(Game.structures, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+            
+            var containers = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return structure.structureType == STRUCTURE_CONTAINER;
+                }
+            });
+            
+            //var miners = _.filter(Game.creeps, (creep) => creep.memory.role == 'miner');
+            
+            var allCreepsInRoom = creep.room.find(FIND_MY_CREEPS);
+            
+            var miners = _.filter(allCreepsInRoom, (creep) => creep.memory.role == 'miner');
+            
+//            console.log('there are '+miners.length+' miners');
+            for (let i in containers) {
+                let match = false;
+//                console.log(creep.name+' is checking ' +containers[i].id);
+                if (!creep.memory.job) {
+                    for (let j in miners) {
+//                        console.log(' against '+miners[j].memory.job);
+                        if (containers[i].id == miners[j].memory.job)
+                        {
+//                            console.log('MATCH!');
+                            match = true;
+                        }
+                    }
+                    if (!match) {
+                        creep.memory.job = containers[i].id;
+                        delete creep.memory.source;
+                    }
+                }
+            }
+            
+        } else {
+//            console.log(creep.name+' says, "I have a job: '+creep.memory.job+'"');
+        }
+        if (Game.getObjectById(creep.memory.job)) {
+            
+            if (creep.pos.x != Game.getObjectById(creep.memory.job).pos.x || creep.pos.y != Game.getObjectById(creep.memory.job).pos.y) {
+                creep.moveTo(Game.getObjectById(creep.memory.job));
+            
+            } else {
+            
+                if (!creep.memory.source)
+                {
+                    creep.memory.source = creep.pos.findClosestByRange(FIND_SOURCES).id;
+                }
+            
+                var source = Game.getObjectById(creep.memory.source);
+            
+                creep.harvest(source);
+            }
+        } else {
+            delete creep.memory.job;
+        }
+    }
+}
+
+module.exports = roleMiner;
