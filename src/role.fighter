@@ -1,0 +1,51 @@
+var roleFighter = {
+    run: function (creep) {
+        
+        //var fighters = _.filter(Game.creeps, (creep) => creep.memory.role == 'fighter');
+
+        if (creep.hits < (creep.hitsMax /2)) {  
+            creep.say(creep.hits+'/'+creep.hitsMax);
+        }
+//        console.log(creep.name+': '+creep.hits+'/'+creep.hitsMax+' HP');
+        
+        var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+        
+        //console.log('Enemies in room: '+enemies.length);
+        
+        if (creep.memory.fighting && enemies.length == 0) {
+            delete creep.memory.fighting;
+            delete creep.memory.job;
+            creep.say('no enemies');
+        }
+        
+        if (!creep.memory.fighting && enemies.length) {
+            creep.memory.fighting = true;
+            creep.say('fighting!');
+        }
+        
+        if (creep.memory.fighting) {
+            
+            // what to do when fighting
+            if (!creep.memory.job) {
+                creep.memory.job = enemies[0].id;
+            }
+            
+            if (creep.memory.job) {
+                if (Game.getObjectById(creep.memory.job)) {
+                    if (creep.rangedAttack(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(Game.getObjectById(creep.memory.job));
+                    } else {
+                    }
+                } else {
+                    creep.memory.job = false;
+                }
+            }
+        } else {
+            
+            creep.moveTo(1,44);
+            
+        }
+    }
+}
+
+module.exports = roleFighter;
