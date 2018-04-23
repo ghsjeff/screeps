@@ -12,6 +12,7 @@ var maintainCreeps = {
         var allStructuresInRoom = curRoom.find(FIND_STRUCTURES);
         
         var containers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_CONTAINER);
+        var storages = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_STORAGE);
         
         var constructionSites = curRoom.find(FIND_CONSTRUCTION_SITES);
         
@@ -233,7 +234,7 @@ var maintainCreeps = {
         }
         //*/
         
-        if (curRoom.energyCapacityAvailable >= 550 &&
+        if (curRoom.energyCapacityAvailable >= 550 && !storages.length &&
             (miners.length < containers.length ||
             transfers.length < TRANSFERMAX ||
             (numFighters < FIGHTERMAX && curRoom.energyCapacityAvailable >= 800 && curRoom.find(FIND_HOSTILE_CREEPS).length)) ||
