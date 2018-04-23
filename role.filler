@@ -161,9 +161,7 @@ var roleFiller = {
         let mySpawns = _.filter(creep.room.find(FIND_STRUCTURES), (structure) => structure.structureType == STRUCTURE_SPAWN);
         
         if (creep.ticksToLive < 30 && creep.carry.energy < 25) {
-            if (mySpawns[0].recycleCreep(creep) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(mySpawns[0].pos);
-            }
+            creep.memory.role = "recycling";
             //creep.suicide();
         }
     }
