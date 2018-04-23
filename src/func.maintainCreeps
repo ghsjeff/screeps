@@ -262,6 +262,8 @@ var maintainCreeps = {
             if (workers.length) {
                 workers[0].memory.role = 'upgrader';
                 console.log(workers[0].room.name + "-" + workers[0].name+' converted from a worker to an upgrader.');
+            } else {
+                makeWorker();
             }
         }
         
