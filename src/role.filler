@@ -24,66 +24,37 @@ var roleFiller = {
         
         if (creep.memory.working) {
                 
-            var jobs = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return ((structure.structureType == STRUCTURE_SPAWN ||
-                    structure.structureType == STRUCTURE_EXTENSION ||
-                    structure.structureType == STRUCTURE_TOWER) &&
-                    (structure.energy < structure.energyCapacity));
-                }
-            });
-            
-            var spawns = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_SPAWN);
-            
-            var extensions = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_EXTENSION);
-            
-            var towers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 950);
-            
-            var lowTowers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 500);
-            
-            /* CODE BACKUP
-            var spawns = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_SPAWN && structure.energy < structure.energyCapacity);
-                }
-            });
-            
-            var extensions = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION && structure.energy < structure.energyCapacity);
-                }
-            });
-            
-            var towers = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_TOWER && structure.energy <= (structure.energyCapacity - creep.carryCapacity));
-                }
-            });
-            
-            var nearFullTowers = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity);
-                }
-            });
-            */
-                
             if (!creep.memory.job) {
+            
+                var jobs = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return ((structure.structureType == STRUCTURE_SPAWN ||
+                        structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_TOWER) &&
+                        (structure.energy < structure.energyCapacity));
+                    }
+                });
+
+                var spawns = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_SPAWN);
+
+                var extensions = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_EXTENSION);
+
+                var towers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity);
+
+                var lowTowers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 500);
                 
                 if (spawns.length) {
                     creep.memory.job = spawns[0].id;
                 } else if (lowTowers.length) {
                     creep.memory.job = lowTowers[0].id;
                 } else if (extensions.length) {
-//                    creep.memory.job = extensions[Math.floor(Math.random() * extensions.length)].id;
+                    //creep.memory.job = extensions[Math.floor(Math.random() * extensions.length)].id;
                     creep.memory.job = creep.pos.findClosestByRange(extensions).id;
                 } else if (towers.length) {
                     creep.memory.job = towers[0].id;
                 } else if (creep.room.storage) {
                     creep.memory.job = creep.room.storage.id;
-                } else {
-                    creep.moveTo(33,24);
                 }
-                
             }
             
             if (creep.memory.job) {
@@ -154,7 +125,7 @@ var roleFiller = {
                 
             } else {
                 creepWithdraw.run(creep);
-                    creep.transfer(Game.getObjectById(creep.memory.job), RESOURCE_GHODIUM_OXIDE);
+                creep.transfer(Game.getObjectById(creep.memory.job), RESOURCE_GHODIUM_OXIDE);
             }
         }
             
