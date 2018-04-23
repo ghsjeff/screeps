@@ -375,7 +375,7 @@ var maintainCreeps = {
             || ((fillers.length && fillers[0].ticksToLive < 60)
             && transfers.length == TRANSFERMAX)) {
             makeTransfer();
-        } else if ((numWorkers < WORKERMAX && curRoom.energyAvailable == curRoom.energyCapacityAvailable) && (curRoom.storage && curRoom.storage.store.energy > 50000)) {
+        } else if ((numWorkers < WORKERMAX && curRoom.energyAvailable == curRoom.energyCapacityAvailable) && (curRoom.storage && curRoom.storage.store.energy > 100000)) {
             makeWorker();
         }
         
