@@ -1,3 +1,3 @@
 # screeps
 
-LIVE code for Screeps - Any changes made to this branch will be pushed live to game world.
+LIVE code for Screeps - Any changes made to ANY branch will be push master branch to game world.
