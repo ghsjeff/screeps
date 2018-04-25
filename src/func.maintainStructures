@@ -29,7 +29,7 @@ var maintainStructures = {
                     if (curRoom.find(FIND_HOSTILE_CREEPS).length) {
                         return (structure.hits < (structure.hitsMax * .9) && structure.structureType != STRUCTURE_RAMPART && structure.structureType != STRUCTURE_WALL);
                     } else {
-                        return (structure.hits < (structure.hitsMax * .9) && structure.hits < 400000 && structure.structureType != STRUCTURE_RAMPART); //  Fix anything below %
+                        return (structure.hits < (structure.hitsMax * .9) && structure.hits < 100000 && structure.structureType != STRUCTURE_RAMPART); //  Fix anything below %
                     }
                 });
             curRoom.memory.repairSites = [];

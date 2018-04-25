@@ -2,7 +2,6 @@
 var maintainCreeps = {
     
     run: function(curRoom) {
-        
         for (var name in Memory.creeps) {
             if (!Game.creeps[name]) {
                 delete Memory.creeps[name];
@@ -12,7 +11,6 @@ var maintainCreeps = {
         var allStructuresInRoom = curRoom.find(FIND_STRUCTURES);
         
         var containers = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_CONTAINER);
-        var storages = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_STORAGE);
         
         var constructionSites = curRoom.find(FIND_CONSTRUCTION_SITES);
         
@@ -34,30 +32,13 @@ var maintainCreeps = {
                 workRoom = curRoom.name;
             }
             
-            console.log("MAKE CREEP CALL: " + curRoom.name + " " + role + " " + workRoom);
+            console.log("MAKE CREEP CALL: " + body + " " + role + " " + workRoom);
             
             let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
             
             for (let x in spawns) {
                 if (spawns[x].canCreateCreep(body,{role: role}) == 0) {
                     console.log('New '+role+': '+spawns[x].createCreep(body,{role: role, homeRoom: curRoom.name, workRoom: workRoom}));
-                    break;
-                }
-            }
-            
-            return 'No Spawns Available';
-        }
-        
-        // Special wrapper for createCreep made to facilitate POWER MINERS - makeCreep() should be updated to be more like this
-        function makeSpecialCreep(body, memory) {
-            
-            console.log("MAKE SPECIAL CREEP CALL: " + curRoom.name);
-            
-            let spawns = _.filter(allStructuresInRoom, (structure) => structure.structureType == STRUCTURE_SPAWN);
-            
-            for (let x in spawns) {
-                if (spawns[x].canCreateCreep(body) == 0) {
-                    console.log('New '+memory.role+': '+spawns[x].createCreep(body,memory));
                     break;
                 }
             }
@@ -133,7 +114,7 @@ var maintainCreeps = {
         
         // change to add a test creep
         const TESTERMAX = 0;
-        const SCHOLARMAX = 0;
+        const SCHOLARMAX = 1;
         
         const HARVESTERMAX = curRoom.memory.harvesterMax;
         const WORKERMAX = Math.ceil(15 / (curRoom.energyCapacityAvailable / bodyCost(WORKERPART)));
@@ -144,57 +125,16 @@ var maintainCreeps = {
         const HEALERMAX = 0;
         // const TRANSFERMAX = 1;
         // todo fix this formula to prevent overspawning transfer creeps
-        const TRANSFERMAX = Math.ceil(Math.floor(1.75 * containers.length) / (curRoom.energyCapacityAvailable / (3 * bodyCost(TRANSFERPART))));
+        const TRANSFERMAX = Math.ceil(Math.floor(1.75 * miners.length) / (curRoom.energyCapacityAvailable / (3 * bodyCost(TRANSFERPART))));
         const MINERMAX = containers.length;
-        
-        // TEST CODE FOR POWER MINER AND POWER MINER HEALER
-        
-        var powerMiners = _.filter(Game.creeps, (creep) => creep.memory.role == 'powerMiner');
-        var numPowerMinerHealers = _.filter(Game.creeps, (creep) => creep.memory.role == 'powerMinerHealer').length;
-        
-        //console.log(curRoom.name + curRoom.energyAvailable);
-        //console.log(curRoom.energyCapacityAvailable);
-        //console.log(curRoom.energyAvailable == curRoom.energyCapacityAvailable);
-        if (!powerMiners.length && 0 && (curRoom.energyAvailable == curRoom.energyCapacityAvailable) && curRoom.name == 'E11N53') {
-            console.log('New Power Miner: '+makeSpecialCreep([
-                TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,                          // TOUGH:  5 x  10 =   50
-                CARRY, CARRY, CARRY, CARRY, CARRY,                          // CARRY:  5 x  50 =  250
-                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
-                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
-                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
-                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,                           // MOVE:   20 x 50 = 1000
-                ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
-                ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
-                ATTACK, ATTACK,                                             // ATTACK: 12 x 80 =  960
-                                                                            // Total:            2260
-                ],{role: 'powerMiner', homeRoom: curRoom.name, workRoom: 'E10N53', powerRoom: 'E10N53'}));                                     
-        }
-        
-        if (powerMiners.length && !numPowerMinerHealers && curRoom.name == 'E11N53' && (curRoom.energyAvailable == curRoom.energyCapacityAvailable)) {
-            console.log('New Power Miner Healer: '+makeSpecialCreep([
-                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,
-                MOVE,  MOVE,                                                // MOVE:  7 x  50  =  350
-                HEAL, HEAL,
-                HEAL, HEAL,
-                HEAL, HEAL,
-                HEAL                                                        // HEAL:   7 x 250 = 1750
-                                                                            // TOTAL:            2100
-                ],{role: 'powerMinerHealer', homeRoom: curRoom.name, powerMinerToHeal: powerMiners[0].name}));
-        }
-        
-        // END POWER TEST BLOCK
         
         if (miners.length > MINERMAX) {
             miners[miners.length - 1].memory.job = miners[0].memory.job;
-            
-            //we could recycle old miners here, but having them leave immediately results in a new loss in energy
-            //miners[0].memory.role = "recycling";
         }
         
         // Calculate energy in containers
         var containerEnergy = 0;
         var needTransfer = false;
-        // Extra Transfer help when containers filling up
         if (containers.length) {
             for (let x in containers) {
                 containerEnergy += containers[x].store.energy;
@@ -205,14 +145,13 @@ var maintainCreeps = {
         }
         
         if (needTransfer) {
-            if (containerEnergy < containers.length * 2000) {
+            if (containerEnergy < containers.length * 1500) {
                 needTransfer = false;
             }
         }
         
         // Creep Report
-        // && 0 to turn off creep report
-        if (!(Game.time % 10) && 0) {
+        if (!(Game.time % 10)) {
             if (numWorkers != WORKERMAX ||
                 numUpgraders != UPGRADERMAX ||
                 miners.length != MINERMAX ||
@@ -234,7 +173,7 @@ var maintainCreeps = {
         }
         //*/
         
-        if (curRoom.energyCapacityAvailable >= 550 && !storages.length &&
+        if (curRoom.energyCapacityAvailable >= 550 &&
             (miners.length < containers.length ||
             transfers.length < TRANSFERMAX ||
             (numFighters < FIGHTERMAX && curRoom.energyCapacityAvailable >= 800 && curRoom.find(FIND_HOSTILE_CREEPS).length)) ||
@@ -245,13 +184,13 @@ var maintainCreeps = {
             curRoom.memory.status = 'unpaused';
         }
         
-        if ((miners.length == 0 && transfers.length == 0) && (containers.length) && curRoom.controller.level > 1) {
+        if ((miners.length == 0 || transfers.length == 0) && (containers.length) && curRoom.controller.level > 1) {
                 for (var name in Game.creeps) {
                     var creep = Game.creeps[name];
                     
                     if (creep.memory.role == 'builder') {
                         creep.memory.role = 'harvester';
-                        console.log(creep.room.name + "-" + creep.name+' converted from an upgrader to a harvester.');
+                        console.log(creep.name+' converted from an upgrader to a harvester.');
                     }
                 }
         }
@@ -262,9 +201,7 @@ var maintainCreeps = {
             
             if (workers.length) {
                 workers[0].memory.role = 'upgrader';
-                console.log(workers[0].room.name + "-" + workers[0].name+' converted from a worker to an upgrader.');
-            } else {
-                makeWorker();
+                console.log(workers[0].name+' converted from a worker to an upgrader.');
             }
         }
         
@@ -274,7 +211,7 @@ var maintainCreeps = {
             
             if (workers.length) {
                 workers[0].memory.role = 'filler';
-                console.log(workers[0].room.name + "-" + workers[0].name+' converted from a transfer to a filler.');
+                console.log(workers[0].name+' converted from a transfer to a filler.');
             }
         }
         
@@ -362,20 +299,16 @@ var maintainCreeps = {
             makeWorker();
         }
         
-        if ((miners.length < MINERMAX || (miners.length && miners.length == MINERMAX && miners[0].ticksToLive < 100)) && curRoom.energyAvailable >= 550) {
+        if ((miners.length < MINERMAX || (miners.length && miners.length == MINERMAX && miners[0].ticksToLive < 125)) && curRoom.energyAvailable >= 550) {
             makeCreep([
                 WORK, WORK, WORK, WORK, WORK,                               // WORK:   5 x 100 =  500
                 MOVE                                                        // MOVE:   1 x  50 =   50
                 ],'miner');                                       // Total:             550
         } else
-        
-        // condition for making a new transfer
-        if ((needTransfer)
-            || transfers.length < TRANSFERMAX
-            || ((fillers.length && fillers[0].ticksToLive < 60)
-            && transfers.length == TRANSFERMAX)) {
+        // Extra Transfer help when containers filling up
+        if ((needTransfer) || transfers.length < TRANSFERMAX || ((fillers.length && fillers[0].ticksToLive < 80) && transfers.length == TRANSFERMAX)) {
             makeTransfer();
-        } else if ((numWorkers < WORKERMAX && curRoom.energyAvailable == curRoom.energyCapacityAvailable) && (curRoom.storage && curRoom.storage.store.energy > 100000)) {
+        } else if ((numWorkers < WORKERMAX && curRoom.energyAvailable == curRoom.energyCapacityAvailable) || (curRoom.storage && curRoom.storage.store.energy > 915000)) {
             makeWorker();
         }
         
@@ -389,6 +322,18 @@ var maintainCreeps = {
                 MOVE                                                        // MOVE:   1 x  50 =   50
                 ],'harvester');                                   // Total:             300
         }
+        
+        //*/
+        
+        /*/ Make Bigger Transfers
+        if (transfers.length < TRANSFERMAX && Game.rooms['sim'].energyAvailable >= 900) {
+            console.log('New Bigger Transfer: '+makeCreep([
+                CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+                CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,                   // CARRY: 12 x  50 =  600
+                MOVE,  MOVE,  MOVE,  MOVE,  MOVE,  MOVE                     // MOVE:   6 x  50 =  300
+                ],{role : 'transfer'}));                                    // Total:             900
+        }
+        //*/
     }
 }
 

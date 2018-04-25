@@ -4,18 +4,6 @@ var expansionControl = {
         
         var myRoom = 'E11N52';
         
-        // if we own the controller, delete warTarget memory
-        if (curRoom.memory.target) {
-            if (Game.rooms[curRoom.memory.target]) {
-                if (Game.rooms[curRoom.memory.target].controller) {
-                    if (Game.rooms[curRoom.memory.target].controller.my) {
-                        delete curRoom.memory.target;
-                        delete curRoom.memory.targetTick;
-                    }
-                }
-            }
-        }
-        
         if (Game.rooms[myRoom]) {
             if (Game.rooms[myRoom].controller.owner) {
                 if (Game.rooms[myRoom].controller.my) {
@@ -33,7 +21,6 @@ var expansionControl = {
                     
                     var spawns = _.filter(allStructuresInRoom, (structure) => (structure.structureType == STRUCTURE_SPAWN));
                     
-                    // this sends ALL creeps home --- intended behavior is send expansion creeps home
                     if (spawns.length) {
                         //console.log("We have spawns!");
                         for (var name in Game.creeps) {

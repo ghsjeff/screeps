@@ -2,8 +2,6 @@ var roleTransfer = {
     
     run: function(creep) {
         
-        //console.log(creep.name);
-        
         delete creep.memory.job;
         
         if (creep.ticksToLive < 60) {
@@ -28,12 +26,12 @@ var roleTransfer = {
         
         if (creep.memory.working) {
             
-            if (!Game.rooms[creep.memory.homeRoom].memory.tickCheck) {
-                Game.rooms[creep.memory.homeRoom].tickCheck = {time:-1};
+            if (!creep.room.memory.tickCheck) {
+                creep.room.memory.tickCheck = {time:-1};
             }
             
-            if (Game.rooms[creep.memory.homeRoom].memory.tickCheck.time != Game.time) {
-                Game.rooms[creep.memory.homeRoom].memory.tickCheck.time = Game.time;
+            if (creep.room.memory.tickCheck.time != Game.time) {
+                creep.room.memory.tickCheck.time = Game.time;
                 var temp = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return ((structure.structureType == STRUCTURE_SPAWN ||
@@ -42,18 +40,14 @@ var roleTransfer = {
                         (structure.energy < structure.energyCapacity));
                     }
                 });
-                
-                
-                
-                
                 var temp2 = [];
                 for (var a in temp) {
                     temp2.push({id: temp[a].id, pos: temp[a].pos, structureType: temp[a].structureType, energy: temp[a].energy, energyCapacity: temp[a].energyCapacity});
                 }
-                Game.rooms[creep.memory.homeRoom].memory.tickCheck.jobs = temp2;
+                creep.room.memory.tickCheck.jobs = temp2;
             }
             
-            var jobs = Game.rooms[creep.memory.homeRoom].memory.tickCheck.jobs;
+            var jobs = creep.room.memory.tickCheck.jobs;
             
             var spawns = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_SPAWN);
             
@@ -74,7 +68,7 @@ var roleTransfer = {
                 
             if (!creep.memory.job) {
                 
-                if (Game.rooms[creep.memory.homeRoom].storage) {
+                if (creep.room.storage) {
                     creep.memory.job = creep.room.storage.id;
                 } else if (spawns.length) {
                     creep.memory.job = spawns[0].id;
@@ -107,91 +101,53 @@ var roleTransfer = {
             
         } else {
             
-            /* backup code
-            var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
+            var targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_CONTAINER);
                 }
             });
             
+            var drops = creep.room.find(FIND_DROPPED_RESOURCES);
             
-            if (!creep.memory.job && targets.length) {
-                for (let x in targets) {
-                    if (creep.memory.job) {
-                        if (targets[targets.length - x - 1].store.energy > Math.min(creep.carryCapacity, 800)) {
-                            creep.memory.job = targets[targets.length - x - 1].id;
-                        }
-                    } else {
-                        creep.memory.job = targets[targets.length - x - 1].id;
-                    }
-                }
-            }
             
-            */
-            
-            if (!creep.memory.job) {
-                
-                var targets = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_CONTAINER);
-                    }
-                });
-                
-                if (creep.memory.homeRoom == "E11N52") {
-                    if (Game.rooms["E12N51"]) {
-                        var addTargets = Game.rooms["E12N51"].find(FIND_STRUCTURES, {
-                            filter: (structure) => {
-                                return (structure.structureType == STRUCTURE_CONTAINER);
+                if (!creep.memory.job && targets.length) {
+                    for (let x in targets) {
+                        if (creep.memory.job) {
+                            if (targets[targets.length - x - 1].store.energy > Math.min(creep.carryCapacity, 800)) {
+                                creep.memory.job = targets[targets.length - x - 1].id;
                             }
-                        });
-                        var targets = targets.concat(addTargets);
-                    }
-                }
-                
-                //console.log(creep.room.name + " has " + targets.length + " targets.");
-                
-                for (let x in targets) {
-                    if (creep.memory.job) {
-                        if (targets[targets.length - 1 - x].store[RESOURCE_ENERGY] > Game.getObjectById(creep.memory.job).store[RESOURCE_ENERGY]) {
+                        } else {
                             creep.memory.job = targets[targets.length - x - 1].id;
                         }
-                    } else {
-                        creep.memory.job = targets[targets.length - x - 1].id;
                     }
                 }
-            }
-            
-            
-            
                 
-            if (Game.getObjectById(creep.memory.job).store[RESOURCE_ENERGY] < (creep.carryCapacity / 3)) {
-                delete creep.memory.job;
-                
-                var drops = creep.room.find(FIND_DROPPED_RESOURCES);
-                
-                for (let d in drops) {
-                    if (drops[d].amount > 0) {
-                        //creep.memory.job = drops[d].id;
-                        //creep.say("DROP!");
-                        break;
+                if (Game.getObjectById(creep.memory.job)) {
+                    if (Game.getObjectById(creep.memory.job).store) {
+                        if (Game.getObjectById(creep.memory.job).store.energy < (creep.carryCapacity / 2)) {
+                            delete creep.memory.job;
+                            for (let d in drops) {
+                                if (drops[d].amount > creep.carryCapacity / 10) {
+                                    creep.memory.job = drops[d].id;
+                                    //creep.say("DROP!");
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
-            }
-                
-                
-            
-                
-            if (creep.carry.energy < creep.carryCapacity) {
-                if (creep.withdraw(Game.getObjectById(creep.memory.job), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(Game.getObjectById(creep.memory.job));
-                } else if (creep.pickup(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(Game.getObjectById(creep.memory.job));
                     
-                } else {
-                    creep.memory.job = false;
-                    creep.memory.working = true;
+                if (creep.carry.energy < creep.carryCapacity) {
+                    if (creep.withdraw(Game.getObjectById(creep.memory.job), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(Game.getObjectById(creep.memory.job));
+                    } else if (creep.pickup(Game.getObjectById(creep.memory.job)) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(Game.getObjectById(creep.memory.job));
+                        
+                    } else {
+                        creep.memory.job = false;
+                        creep.memory.working = true;
+                    }
                 }
-            }
         }
     }
 }

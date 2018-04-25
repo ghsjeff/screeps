@@ -4,10 +4,12 @@ var roleFiller = {
     
     run: function(creep) {
         
-        //delete creep.memory.job;
-        
         if (creep.ticksToLive < 60) {
             creep.say(creep.ticksToLive);
+        }
+        
+        if (creep.ticksToLive < 30 && creep.carry.energy < 25) {
+            creep.suicide();
         }
         
         if (creep.memory.working && creep.carry.energy < 25) {
@@ -23,10 +25,14 @@ var roleFiller = {
         }
         
         if (creep.memory.working) {
-                
-            if (!creep.memory.job) {
             
-                var jobs = Game.rooms[creep.memory.homeRoom].find(FIND_STRUCTURES, {
+            if (!creep.room.memory.tickCheck) {
+                creep.room.memory.tickCheck = {time:-1};
+            }
+            
+            if (creep.room.memory.tickCheck.time != Game.time) {
+                creep.room.memory.tickCheck.time = Game.time;
+                creep.room.memory.tickCheck.jobs = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return ((structure.structureType == STRUCTURE_SPAWN ||
                         structure.structureType == STRUCTURE_EXTENSION ||
@@ -34,27 +40,61 @@ var roleFiller = {
                         (structure.energy < structure.energyCapacity));
                     }
                 });
-
-                var spawns = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_SPAWN);
-
-                var extensions = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_EXTENSION);
-
-                var towers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity);
-
-                var lowTowers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 500);
+            }
+            
+            var jobs = creep.room.memory.tickCheck.jobs;
+            
+            var spawns = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_SPAWN);
+            
+            var extensions = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_EXTENSION);
+            
+            var towers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 950);
+            
+            var lowTowers = _.filter(jobs, (structure) => structure.structureType == STRUCTURE_TOWER && structure.energy < 500);
+            
+            /* CODE BACKUP
+            var spawns = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_SPAWN && structure.energy < structure.energyCapacity);
+                }
+            });
+            
+            var extensions = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION && structure.energy < structure.energyCapacity);
+                }
+            });
+            
+            var towers = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_TOWER && structure.energy <= (structure.energyCapacity - creep.carryCapacity));
+                }
+            });
+            
+            var nearFullTowers = creep.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity);
+                }
+            });
+            */
+                
+            if (!creep.memory.job) {
                 
                 if (spawns.length) {
                     creep.memory.job = spawns[0].id;
                 } else if (lowTowers.length) {
                     creep.memory.job = lowTowers[0].id;
                 } else if (extensions.length) {
-                    //creep.memory.job = extensions[Math.floor(Math.random() * extensions.length)].id;
+//                    creep.memory.job = extensions[Math.floor(Math.random() * extensions.length)].id;
                     creep.memory.job = creep.pos.findClosestByRange(extensions).id;
                 } else if (towers.length) {
                     creep.memory.job = towers[0].id;
                 } else if (creep.room.storage) {
                     creep.memory.job = creep.room.storage.id;
+                } else {
+                    creep.moveTo(33,24);
                 }
+                
             }
             
             if (creep.memory.job) {
@@ -75,7 +115,7 @@ var roleFiller = {
             }
             
         } else {
-            if (Game.rooms[creep.memory.homeRoom].energyAvailable == Game.rooms[creep.memory.homeRoom].energyCapacityAvailable) {
+            if (creep.room.energyAvailable == creep.room.energyCapacityAvailable) {
                 
                 var drops = creep.room.find(FIND_DROPPED_RESOURCES, (drop) => drop.amount > 500);
                 creep.room.memory.drops = drops;
@@ -125,15 +165,7 @@ var roleFiller = {
                 
             } else {
                 creepWithdraw.run(creep);
-                creep.transfer(Game.getObjectById(creep.memory.job), RESOURCE_GHODIUM_OXIDE);
             }
-        }
-            
-        let mySpawns = _.filter(creep.room.find(FIND_STRUCTURES), (structure) => structure.structureType == STRUCTURE_SPAWN);
-        
-        if (creep.ticksToLive < 30 && creep.carry.energy < 25) {
-            creep.memory.role = "recycling";
-            //creep.suicide();
         }
     }
 }

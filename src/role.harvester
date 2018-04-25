@@ -45,11 +45,6 @@ var roleHarvester = {
             }
             
         } else {
-            if (!creep.memory.mySource) {
-                creep.memory.mySource = Math.floor(Math.random() * 2);
-                console.log(creep.memory.mySource);
-            }
-            
             var source = creep.room.find(FIND_SOURCES);
             
             if (creep.harvest(source[0]) == ERR_NOT_IN_RANGE) {
@@ -65,7 +60,7 @@ var roleHarvester = {
         
         if (numTransfers > 0 && numMiners > 0) {
             creep.memory.role = 'builder';
-            //console.log(creep.name+' converted from a harvester to a builder.');
+            console.log(creep.name+'converted from a harvester to a builder.');
         };
         
         if (creep.ticksToLive < 60) {

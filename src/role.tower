@@ -29,19 +29,14 @@ var roleTower = {
         
         var allStructuresInRoom = tower.room.find(FIND_MY_STRUCTURES);
         
-        var ramparts = _.filter(allStructuresInRoom, (rampart) => (rampart.structureType == STRUCTURE_RAMPART && rampart.hits < 400000));
+        var ramparts = _.filter(allStructuresInRoom, (rampart) => (rampart.structureType == STRUCTURE_RAMPART && rampart.hits < 200000));
         
         var walls = _.filter(tower.room.find(FIND_STRUCTURES), (wall) => (wall.structureType == STRUCTURE_WALL && wall.hits < 50000));
         
         //console.log(Math.floor(Math.random() * enemies.length));
         
         if (invaderHealer) {
-            if (walls.length) {
-                tower.repair(walls[0]);
-            } else {
-                tower.repair(ramparts[0]);
-            }
-            
+            tower.repair(walls[0]);
         } else if (injFighters.length) {
             tower.heal(injFighters[0]);
         } else if (enemies.length) {
@@ -55,7 +50,7 @@ var roleTower = {
         } else if (tower.room.energyAvailable == tower.room.energyCapacityAvailable
             && damages.length
             && tower.room.memory.status != 'paused'
-            && (!tower.room.storage || tower.room.storage.store.energy > 50000)) {
+            && (!tower.room.storage || tower.room.storage.store.energy > 1000)) {
             tower.repair(Game.getObjectById(damages[0]));
         }
         

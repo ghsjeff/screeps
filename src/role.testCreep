@@ -1,20 +1,18 @@
 var roleTest = {
     run: function (creep) {
         
-        //creep.memory.role = "recycling";
-        
         // Creep remembers where he came from
         if (!creep.memory.homeRoom) {
             creep.memory.homeRoom = creep.room.name;
         }
         
-        creep.memory.workRoom = "E12N51";
+        creep.memory.workRoom = "E11N52";
         
         // if we are in the target room, we just stand there and give vision
         if (creep.room.name == creep.memory.workRoom) {
             
             // Add code here for behavior in target room.
-            creep.moveTo(6, 47);
+            
             
             // This block gets the creep off the door
             if (creep.pos.x == 49) {
@@ -34,9 +32,9 @@ var roleTest = {
             }
 
         } else {
-            console.log(creep.name + " heading to scout " + creep.memory.workRoom);
+            console.log("Michah: " + creep.memory.workRoom);
             // go to attack room
-            creep.moveTo(new RoomPosition(25,25, creep.memory.workRoom), {reusePath: 10});
+            creep.moveTo(new RoomPosition(25,25, creep.memory.workRoom));
             
             //go to home room
             //creep.moveTo(new RoomPosition(25,25, creep.memory.homeRoom));
